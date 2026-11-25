@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b1020">
+  <title>PoseLab — Human Pose Estimation</title>
+  <meta name="description" content="Real-time human pose estimation in your browser using MediaPipe Pose Landmarker.">
+  <style>
+    :root{color-scheme:dark;--bg:#090e1b;--panel:#111a2d;--line:#25334d;--muted:#9ba9c2;--text:#edf3ff;--accent:#72e0c1;--blue:#7aa7ff}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#1b2b48 0,transparent 55%),var(--bg);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+    .wrap{max-width:1120px;margin:auto;padding:32px 20px 48px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:30px}.brand{display:flex;align-items:center;gap:12px;font-weight:750;letter-spacing:.2px}.mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#72a7ff);display:grid;place-items:center;color:#07131d;font-size:21px}.tag{color:var(--muted);font-size:12px;border:1px solid var(--line);border-radius:999px;padding:6px 10px}
+    h1{font-size:clamp(30px,5vw,48px);line-height:1.08;letter-spacing:-1.7px;margin:0 0 12px}.intro{color:var(--muted);max-width:680px;margin:0 0 26px}.accent{color:var(--accent)}
+    .layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(260px,.8fr);gap:18px;align-items:start}.panel{background:linear-gradient(160deg,rgba(21,32,53,.97),rgba(14,22,39,.97));border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 18px 55px #0003}.viewer-head{display:flex;justify-content:space-between;align-items:center;padding:15px 18px;border-bottom:1px solid var(--line)}.viewer-head strong{font-size:14px}.status{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:#77849b}.dot.live{background:var(--accent);box-shadow:0 0 12px #72e0c188}
+    .stage{position:relative;background:#050914;aspect-ratio:16/10;display:grid;place-items:center;overflow:hidden}.stage video,.stage canvas{position:absolute;width:100%;height:100%;inset:0;object-fit:cover;transform:scaleX(-1)}.stage canvas{pointer-events:none}.placeholder{padding:30px;text-align:center;color:var(--muted);max-width:380px}.placeholder .glyph{font-size:44px;margin-bottom:10px}.placeholder strong{display:block;color:var(--text);font-size:16px;margin-bottom:5px}
+    .controls{display:flex;flex-wrap:wrap;gap:10px;padding:15px 18px}.btn{border:1px solid var(--line);border-radius:11px;padding:10px 15px;background:#192640;color:var(--text);font:600 13px inherit;cursor:pointer;transition:.18s}.btn:hover:not(:disabled){border-color:#6d89b6;transform:translateY(-1px)}.btn.primary{background:var(--accent);border-color:var(--accent);color:#071a19}.btn:disabled{opacity:.45;cursor:not-allowed}.hint{padding:0 18px 16px;color:var(--muted);font-size:12px}
+    .side{display:grid;gap:14px}.card{padding:18px}.card h2{font-size:14px;margin:0 0 14px}.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{background:#0b1425;border:1px solid #22314b;border-radius:12px;padding:12px}.metric span{display:block;color:var(--muted);font-size:11px;margin-bottom:5px}.metric strong{font-size:21px;font-variant-numeric:tabular-nums}.metric small{font-size:11px;color:var(--muted)}
+    .angle-list{display:grid;gap:10px}.angle{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#0b1425;border:1px solid #22314b;border-radius:10px}.angle span{color:var(--muted);font-size:12px}.angle strong{font-size:14px;font-variant-numeric:tabular-nums}.note{font-size:12px;color:var(--muted);margin:12px 0 0}.steps{display:grid;gap:12px}.step{display:flex;gap:10px;color:var(--muted);font-size:12px}.num{flex:none;width:22px;height:22px;border-radius:7px;background:#1b2a45;color:var(--accent);display:grid;place-items:center;font-weight:700}
+    footer{margin-top:24px;text-align:center;color:#71809a;font-size:11px}a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+    @media(max-width:800px){.layout{grid-template-columns:1fr}.wrap{padding:22px 14px 36px}.top{margin-bottom:24px}.stage{aspect-ratio:4/3}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div class="brand"><div class="mark">⌁</div><span>PoseLab</span></div>
+      <span class="tag">COMPUTER VISION PROJECT</span>
+    </header>
+    <section>
+      <h1>See movement.<br><span class="accent">Map the human pose.</span></h1>
+      <p class="intro">A real-time human pose estimation demo powered by Google's MediaPipe Pose Landmarker. Start your camera to detect body landmarks, draw a connected skeleton and estimate joint angles.</p>
+    </section>
+    <section class="layout">
+      <div class="panel">
+        <div class="viewer-head"><strong>Live camera</strong><div class="status"><i class="dot" id="statusDot"></i><span id="statusText">Camera stopped</span></div></div>
+        <div class="stage" id="stage">
+          <video id="video" playsinline muted></video>
+          <canvas id="overlay"></canvas>
+          <div class="placeholder" id="placeholder"><div class="glyph">◎</div><strong>Your camera view will appear here</strong><span>Press “Start camera” and allow camera access when your browser asks.</span></div>
+        </div>
+        <div class="controls">
+          <button class="btn primary" id="startBtn">Start camera</button>
+          <button class="btn" id="stopBtn" disabled>Stop camera</button>
+          <button class="btn" id="resetBtn">Reset stats</button>
+        </div>
+        <div class="hint" id="hint">Camera access is processed in your browser. Video is not uploaded or stored by this demo.</div>
+      </div>
+      <aside class="side">
+        <div class="panel card">
+          <h2>Detection overview</h2>
+          <div class="metric-grid">
+            <div class="metric"><span>POSES FOUND</span><strong id="poseCount">0</strong></div>
+            <div class="metric"><span>VISIBLE LANDMARKS</span><strong id="landmarkCount">0</strong></div>
+            <div class="metric"><span>PROCESSING</span><strong id="fps">—</strong><small> FPS</small></div>
+            <div class="metric"><span>FRAMES ANALYSED</span><strong id="frames">0</strong></div>
+          </div>
+        </div>
+        <div class="panel card">
+          <h2>Estimated joint angles</h2>
+          <div class="angle-list">
+            <div class="angle"><span>Left elbow</span><strong id="leftElbow">—</strong></div>
+            <div class="angle"><span>Right elbow</span><strong id="rightElbow">—</strong></div>
+            <div class="angle"><span>Left knee</span><strong id="leftKnee">—</strong></div>
+            <div class="angle"><span>Right knee</span><strong id="rightKnee">—</strong></div>
+          </div>
+          <p class="note">Angles are calculated from detected 2D landmark coordinates. They are estimates, not medical measurements.</p>
+        </div>
+        <div class="panel card">
+          <h2>How to use</h2>
+          <div class="steps">
+            <div class="step"><b class="num">1</b><span>Allow camera access when prompted.</span></div>
+            <div class="step"><b class="num">2</b><span>Stand back so your upper and lower body are visible.</span></div>
+            <div class="step"><b class="num">3</b><span>Move your arms and legs to see landmarks and angles update.</span></div>
+          </div>
+        </div>
+      </aside>
+    </section>
+    <footer>Built with MediaPipe Tasks Vision · Runs in your browser · <a href="https://github.com/Elvmeen/human-pose-estimation" target="_blank" rel="noreferrer">View source on GitHub</a></footer>
+  </main>
+  <script type="module">
+    import { FilesetResolver, PoseLandmarker, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("overlay");
+    const ctx = canvas.getContext("2d");
+    const placeholder = document.getElementById("placeholder");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+    const hint = document.getElementById("hint");
+    const $ = id => document.getElementById(id);
+    let landmarker, stream, running = false, lastVideoTime = -1, frameCount = 0, lastFpsTime = performance.now(), fpsFrames = 0;
+
+    const connections = PoseLandmarker.POSE_CONNECTIONS;
+    const angle = (a,b,c) => {
+      if (!a || !b || !c || (a.visibility ?? 1) < .35 || (b.visibility ?? 1) < .35 || (c.visibility ?? 1) < .35) return null;
+      const radians = Math.atan2(c.y-b.y,c.x-b.x)-Math.atan2(a.y-b.y,a.x-b.x);
+      let degrees = Math.abs(radians*180/Math.PI);
+      if (degrees > 180) degrees = 360-degrees;
+      return Math.round(degrees);
+    };
+    const setAngle = (id,value) => $(id).textContent = value === null ? "—" : value + "°";
+    const updateAngles = p => {
+      setAngle("leftElbow",angle(p[11],p[13],p[15]));
+      setAngle("rightElbow",angle(p[12],p[14],p[16]));
+      setAngle("leftKnee",angle(p[23],p[25],p[27]));
+      setAngle("rightKnee",angle(p[24],p[26],p[28]));
+    };
+    async function loadModel(){
+      if (landmarker) return;
+      statusText.textContent = "Loading AI model…";
+      const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+      landmarker = await PoseLandmarker.createFromOptions(vision,{
+        baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",delegate:"GPU"},
+        runningMode:"VIDEO",numPoses:2,minPoseDetectionConfidence:.5,minPosePresenceConfidence:.5,minTrackingConfidence:.5
+      });
+    }
+    async function startCamera(){
+      startBtn.disabled = true;
+      try{
+        await loadModel();
+        stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:1280},height:{ideal:720}},audio:false});
+        video.srcObject = stream;
+        await video.play();
+        placeholder.hidden = true;
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        running = true; lastVideoTime = -1; frameCount = 0; fpsFrames = 0; lastFpsTime = performance.now();
+        stopBtn.disabled = false; statusDot.classList.add("live"); statusText.textContent = "Camera active";
+        hint.textContent = "Live pose tracking is running. Keep your body in view for best results.";
+        requestAnimationFrame(loop);
+      }catch(error){
+        console.error(error);
+        statusText.textContent = "Could not start camera";
+        hint.textContent = error.name === "NotAllowedError" ? "Camera permission was denied. Allow camera access in your browser settings and try again." : "Camera or model could not start. Use HTTPS or localhost and check your internet connection.";
+        startBtn.disabled = false;
+      }
+    }
+    function loop(){
+      if(!running) return;
+      if(video.currentTime !== lastVideoTime){
+        lastVideoTime = video.currentTime;
+        const result = landmarker.detectForVideo(video,performance.now());
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        const poses = result.landmarks || [];
+        $("poseCount").textContent = poses.length;
+        $("landmarkCount").textContent = poses.reduce((n,p)=>n+p.filter(x=>(x.visibility??1)>.35).length,0);
+        if(poses.length){
+          const drawer = new DrawingUtils(ctx);
+          for(const pose of poses){
+            drawer.drawConnectors(pose,connections,{color:"#72e0c1",lineWidth:4});
+            drawer.drawLandmarks(pose,{color:"#ffffff",fillColor:"#72a7ff",lineWidth:1,radius:4});
+          }
+          updateAngles(poses[0]);
+        }else updateAngles([]);
+        frameCount++; fpsFrames++;
+        $("frames").textContent = frameCount;
+        const now = performance.now();
+        if(now-lastFpsTime>=1000){$("fps").textContent=Math.round(fpsFrames*1000/(now-lastFpsTime));fpsFrames=0;lastFpsTime=now;}
+      }
+      requestAnimationFrame(loop);
+    }
+    function stopCamera(){
+      running = false;
+      if(stream) stream.getTracks().forEach(track=>track.stop());
+      stream = null; video.srcObject = null;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      placeholder.hidden = false; stopBtn.disabled = true; startBtn.disabled = false;
+      statusDot.classList.remove("live"); statusText.textContent = "Camera stopped";
+      hint.textContent = "Camera stopped. Start it again whenever you are ready.";
+      $("poseCount").textContent="0"; $("landmarkCount").textContent="0"; $("fps").textContent="—";
+      ["leftElbow","rightElbow","leftKnee","rightKnee"].forEach(id=>setAngle(id,null));
+    }
+    startBtn.addEventListener("click",startCamera);
+    stopBtn.addEventListener("click",stopCamera);
+    $("resetBtn").addEventListener("click",()=>{frameCount=0;$("frames").textContent="0";fpsFrames=0;});
+    window.addEventListener("pagehide",stopCamera);
+  </script>
+</body>
+</html>
